@@ -34,7 +34,7 @@ Yahoo!デベロッパーネットワークで[アプリケーションIDを登�
 (自分で登録したアプリケーションIDへの書き換え)
 
     $ cd yolp-jsapi-samples
-    $ find . -type f -name "*.html" -print | xargs sed -i "s/YourApplicationId/OpenLocalPlatform/g"
+    $ find . -type f -name "*.html" -print0 | xargs -0 perl -pi -e "s/YourApplicationId/OpenLocalPlatform/g"
 
 ### 4. 動作確認
 
