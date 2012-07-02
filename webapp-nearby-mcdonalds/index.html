@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>マクどこ - Yahoo! JavaScriptマップAPI</title>
+<style>
+html, body, div{
+    margin:0; padding:0;
+}
+a{
+    color:#fff; font-weight:bold;
+}
+div#label{
+    z-index:2;
+    padding:8px;
+    overflow:hidden;
+    color: #fff;
+    background-color: #000;
+    background-image: -webkit-gradient(
+        linear,
+        0% 0%,
+        0% 100%,
+        from(rgba(155, 155, 155, 0.1)),
+        to(rgba(255, 255, 255, 0.5)),
+        color-stop(.5,rgba(155, 155, 155, 0.2)),
+        color-stop(.5,rgba(255, 255, 255, 0.1))
+    );
+    border-radius: 8px;
+    opacity: .7;
+}
+div#title{
+    font-size:14pt;
+    font-weight:bold;
+    line-height:1.2em;
+    width:100%;
+    overflow:hidden;
+}
+div#desc{
+    font-size:9pt;
+    font-weight:normal;
+    line-height:9pt;
+    overflow:hidden;
+}
+</style>
+</head>
+<body>
+<div id="container" style="width:100%; height:100%; position:relative;">
+<div id="map" style="width:100%; height:100%;"></div>
+<div id="label" style="position:absolute; bottom:4px; right:4px; width:92%; height:64px">
+<div id="title">マクどこ</div>
+<div id="desc">always I'm lovin'it</div>
+</div>
+</div>
+<script src="http://js.api.olp.yahooapis.jp/OpenLocalPlatform/V1/jsapi?appid=YourApplicationId"></script>
+<script src="http://code.jquery.com/jquery-latest.js"></script>
+<script>
+ /*
+  * Copyright (c) 2012, Yahoo Japan Corporation.  All rights reserved.
+  * Copyrights licensed under the MIT License.
+  * See the accompanying LICENSE file for terms. */
+
+jQuery(document).ready(function($){
+    //resize container
+    $('#container').css({height: parseInt($(window).height(), 10)});
+
+    //initialize map
+    var map = new Y.Map("map");
+    map.addControl(new Y.ZoomControl());
+    map.drawMap(new Y.LatLng(34.6812,135.2022), 14, Y.LayerSetId.NORMAL);
+
+    //main loop
+    var lastlatlng = new Y.LatLng(0,0);
+    if(navigator.geolocation){
+        navigator.geolocation.watchPosition(function(pos){
+        var latlng = new Y.LatLng(pos.coords.latitude,pos.coords.longitude);
+        if(latlng.distance(lastlatlng) > 0.1){
+            lastlatlng = latlng;
+            searchNearestMcDonald(latlng);
+            }
+        });
+    }
+
+    //search nearest McDonald
+    var searchNearestMcDonald = function(latlng){
+        $.ajax({
+            url: "http://search.olp.yahooapis.jp/OpenLocalPlatform/V1/localSearch",
+            dataType: "jsonp",
+            data:{
+                appid: "YourApplicationId",
+                cid: "d115e2a62c8f28cb03a493dc407fa03f",
+                results: 1,
+                lat: latlng.lat(),
+                lon: latlng.lng(),
+                sort: "dist",
+                output: "json"
+            },
+            success: function(result){
+                updateRoute(latlng, result);
+            }
+        });
+    }
+
+    //update Route
+    var plugin = null;
+    var updateRoute = function(latlng, result){
+        var coords = result.Feature[0].Geometry.Coordinates.split(",");
+        if(plugin){
+            map.removePlugin(plugin);
+        }
+        plugin = new Y.RouteSearchPlugin({latlngs:[
+            latlng,
+            new Y.LatLng(coords[1],coords[0])
+        ]});
+        map.addPlugin(plugin);
+
+        var name = result.Feature[0].Name;
+        var address = result.Feature[0].Property.Address;
+        var tel = result.Feature[0].Property.Tel1;
+        var simplename = name.replace('マクドナルド','');
+        var distance = (plugin.estimateDistance() * 1000) + 'm';
+        var description = address + '<br><a href="tel:' + tel + '">' + tel + '</a>';
+        var credit = [
+            '<!-- Begin Yahoo! JAPAN Web Services Attribution Snippet -->',
+            '<a href="http://developer.yahoo.co.jp/about">',
+            '<img src="http://i.yimg.jp/images/yjdn/yjdn_attbtn1_125_17.gif" title="Webサービス by Yahoo! JAPAN" alt="Web Services by Yahoo! JAPAN" width="125" height="17" style="border:0; margin:0;"></a>',
+            '<!-- End Yahoo! JAPAN Web Services Attribution Snippet -->',
+        ].join('');
+        $('#title').html(simplename + '(' +  distance + ')');
+        $('#desc').html(address + '<br>' + credit);
+    }
+});
+</script>
+</body>
+</html>

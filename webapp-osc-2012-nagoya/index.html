@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+<title>ルートラボConnect連係 - Yahoo! JavaScriptマップAPI</title>
+</head>
+<body style="margin:0px;">
+<div id="map" style="width:320px; height:300px;"></div>
+<div style="width:320px;padding:5px;text-align:center;">
+<form id="search">
+<input type="text" name="address" size="25" placeholder="住所検索">
+<input type="submit" value="検索">
+<button id="finalize">描画完了</button>
+</form>
+<button id="routelab" style="display:none;">ルートラボへ投稿</button>
+<p style="margin:0;">
+<!-- Begin Yahoo! JAPAN Web Services Attribution Snippet -->
+<a href="http://developer.yahoo.co.jp/about">
+<img src="http://i.yimg.jp/images/yjdn/yjdn_attbtn2_105_17.gif" width="105" height="17" title="Webサービス by Yahoo! JAPAN" alt="Webサービス by Yahoo! JAPAN" style="border:0; margin:15px 15px 15px 15px;"></a>
+<!-- End Yahoo! JAPAN Web Services Attribution Snippet -->
+</p>
+</div>
+
+<script charset="utf-8" src="http://js.api.olp.yahooapis.jp/OpenLocalPlatform/V1/jsapi?appid=YourApplicationId"></script>
+<script charset="utf-8" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js"></script>
+<script>
+ /*
+  * Copyright (c) 2012, Yahoo Japan Corporation.  All rights reserved.
+  * Copyrights licensed under the MIT License.
+  * See the accompanying LICENSE file for terms. */
+
+$(function(){
+    var ymap = new Y.Map("map");
+    ymap.drawMap(new Y.LatLng(35.66572, 139.73100), 15, Y.LayerSetId.NORMAL);
+
+    $("#search").submit(function(){
+        $.getJSON("http://geo.search.olp.yahooapis.jp/OpenLocalPlatform/V1/geoCoder?callback=?",{
+            appid:"YourApplicationId",
+            query:this.address.value,
+            results:1,
+            output:"json"
+        },function(data){
+            if(data.Feature){
+                var lonlat = data.Feature[0].Geometry.Coordinates.split(/,/);
+                ymap.panTo(new Y.LatLng(parseFloat(lonlat[1]),parseFloat(lonlat[0])));
+                polyline.startDrawing();
+            }
+        });
+        this.address.blur();
+        return false;
+    });
+
+    var polyline = new Y.Polyline([]);
+    ymap.addFeature(polyline);
+    polyline.startDrawing();
+    $("#finalize").click(function(){
+        polyline.finalizeDrawing();
+        return false;
+    });
+    ymap.bind('zoomend',function(){
+        polyline.startDrawing();
+    });
+
+    polyline.bind('endline',function(){
+        $("#search").hide();
+        $("#routelab").show();
+    });
+
+    $("#routelab").click(function(){
+        var points = polyline.getLatLngs().toString();
+        window.open("http://latlonglab.yahoo.co.jp/route/connect?points="+points);
+    });
+});
+</script>
+</body>
+</html>

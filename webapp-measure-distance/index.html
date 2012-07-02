@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<title>距離測定 - Yahoo! JavaScriptマップAPI</title>
+<meta charset="utf-8">
+</head>
+<body>
+<h1>距離測定</h1>
+<div style="width:640px; height:480px; position:relative; margin:8px;">
+<div id="map" style="width:640px; height:480px;"></div>
+<canvas id="canvas" width="640" height="480" style="position:absolute; top:0px; left:0px; width:640px; height:480px; z-index:2; display:none;"></canvas>
+<div id="result" style="position:absolute; top:8px; left:8px; font-size:24pt; font-weight:bold; display:none;"></div>
+<button id="measure" style="position:absolute; top:8px; right:8px; z-index:3; display:none;">start measuring</button>
+</div>
+<p>
+<!-- Begin Yahoo! JAPAN Web Services Attribution Snippet -->
+<a href="http://developer.yahoo.co.jp/about">
+<img src="http://i.yimg.jp/images/yjdn/yjdn_attbtn2_105_17.gif" width="105" height="17" title="Webサービス by Yahoo! JAPAN" alt="Webサービス by Yahoo! JAPAN" style="border:0; margin:15px 15px 15px 15px;"></a>
+<!-- End Yahoo! JAPAN Web Services Attribution Snippet -->
+</p>
+
+<script src="http://js.api.olp.yahooapis.jp/OpenLocalPlatform/V1/jsapi?appid=YourApplicationId"></script>
+<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+<script>
+ /*
+  * Copyright (c) 2012, Yahoo Japan Corporation.  All rights reserved.
+  * Copyrights licensed under the MIT License.
+  * See the accompanying LICENSE file for terms. */
+
+$(document).ready(function($){
+    var map = new Y.Map("map", {configure:{scrollWheelZoom:true}}),
+        canvas = $('#canvas'),
+        ctx = canvas[0].getContext('2d'),
+        result = $('#result'),
+        button = $('#measure'),
+        isDrawMode = false,
+        isDrawing = false,
+        prev = null,
+        prevll = null,
+        distance = 0;
+
+    ctx.strokeStyle = 'rgba(0,128,255,1.0)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    canvas.bind("mousedown", function(e){
+        ctx.clearRect(0, 0, canvas.width(), canvas.height());
+        prev = {x:e.offsetX, y:e.offsetY};
+        prevll = map.fromContainerPixelToLatLng(prev);
+        distance = 0;
+        result.empty();
+        isDrawing = true;
+        return false;
+    });
+    canvas.bind("mousemove", function(e){
+        if(isDrawing){
+            var current = {x:e.offsetX, y:e.offsetY},
+                currentll = map.fromContainerPixelToLatLng(current);
+                ctx.beginPath();
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(current.x, current.y);
+                ctx.stroke();
+                ctx.closePath();
+
+            distance += prevll.distance(currentll);
+            result.html(distance >= 1.0 ? Math.floor(distance * 10) / 10 + 'km' : Math.floor(distance * 1000) + 'm');
+
+            prev = current;
+            prevll = currentll;
+        }
+    });
+    $(document).bind("mouseup", function(e){
+        if(isDrawing) {
+            isDrawing = false;
+        }
+    });
+
+    button.bind("click", function(){
+        if(isDrawMode){
+            canvas.hide();
+            result.hide();
+            button.html('start measuring');
+            isDrawMode = false;
+        }
+        else{
+            ctx.clearRect(0, 0, canvas.width(), canvas.height());
+            canvas.show();
+            result.empty();
+            result.show();
+            button.html('stop');
+            isDrawMode = true;
+        }
+    }).show();
+    map.drawMap(new Y.LatLng(35.691052, 139.701258), 16, Y.LayerSetId.NORMAL);
+});
+</script>
+</body>
+</html>

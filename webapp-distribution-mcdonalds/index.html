@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>東京23区マクドナルド分布 - Yahoo! JavaScriptマップAPI</title>
+</head>
+<body>
+<div style="width:620px; margin-left:auto; margin-right:auto;">
+<h1>東京23区マクドナルド分布</h1>
+<p>
+東京都
+<select id="area">
+<option value="千代田区">千代田区</option>
+<option value="中央区">中央区</option>
+<option value="港区">港区</option>
+<option value="新宿区">新宿区</option>
+<option value="文京区">文京区</option>
+<option value="台東区">台東区</option>
+<option value="墨田区">墨田区</option>
+<option value="江東区">江東区</option>
+<option value="品川区">品川区</option>
+<option value="目黒区">目黒区</option>
+<option value="大田区">大田区</option>
+<option value="世田谷区">世田谷区</option>
+<option value="渋谷区">渋谷区</option>
+<option value="中野区">中野区</option>
+<option value="杉並区">杉並区</option>
+<option value="豊島区">豊島区</option>
+<option value="北区">北区</option>
+<option value="荒川区">荒川区</option>
+<option value="板橋区">板橋区</option>
+<option value="練馬区">練馬区</option>
+<option value="足立区">足立区</option>
+<option value="葛飾区">葛飾区</option>
+<option value="江戸川区">江戸川区</option>
+</select>
+<input type="button" value="表示" onclick="renderArea();">
+</p>
+<div id="map" style="width:600px; height:480px;"></div>
+<p>
+<!-- Begin Yahoo! JAPAN Web Services Attribution Snippet -->
+<a href="http://developer.yahoo.co.jp/about">
+<img src="http://i.yimg.jp/images/yjdn/yjdn_attbtn2_105_17.gif" width="105" height="17" title="Webサービス by Yahoo! JAPAN" alt="Webサービス by Yahoo! JAPAN" style="border:0; margin:15px 15px 15px 15px;"></a>
+<!-- End Yahoo! JAPAN Web Services Attribution Snippet -->
+</p>
+</div>
+<script src="http://js.api.olp.yahooapis.jp/OpenLocalPlatform/V1/jsapi?appid=YourApplicationId"></script>
+<script>
+ /*
+  * Copyright (c) 2012, Yahoo Japan Corporation.  All rights reserved.
+  * Copyrights licensed under the MIT License.
+  * See the accompanying LICENSE file for terms. */
+
+// Y.Pluginを継承したCassetteHeatmapPluginを定義します
+var CassetteHeatmapPlugin = Y.extend(Y.Plugin , function(appId, cassetteId) {
+    this.geoCoder = new Y.GeoCoder();
+    this.heatmapLayer = null;
+    this.urlBase = "http://search.olp.yahooapis.jp/OpenLocalPlatform/V1/localSearch" +
+                   "?appid=" + appId +
+                   "&cid=" + cassetteId +
+                   "&sort=dist" +
+                   "&results=100" +
+                   "&dist=5";
+});
+
+// load()メソッドを実装します
+CassetteHeatmapPlugin.prototype.load = function(map) {
+    // プラグイン自身が関連付けられたY.Mapオブジェクトを保持します
+    this.map = map;
+};
+
+// 受け取ったqueryの周辺ショップ情報をヒートマップ表示します
+CassetteHeatmapPlugin.prototype.render = function(query) {
+    // 表示済みのヒートマップレイヤーがあった時は事前に削除します
+    if (this.heatmapLayer) {
+        this.map.removeLayer(this.heatmapLayer);
+        this.heatmapLayer = null;
+    }
+
+    // ジオコーダAPIへの問い合わせを実行します
+    var self = this;
+    var request = {
+        "query": query
+    };
+    this.geoCoder.execute(request, function(ydf) {
+        var hasResult = ydf.result.count > 0;
+        if (hasResult) {
+            // ジオコーディング結果を使って地図上にヒートマップを追加します
+            var latlng = ydf.features[0].latlng;
+            self.addHeatmapLayer(latlng);
+        }
+    });
+};
+
+CassetteHeatmapPlugin.prototype.addHeatmapLayer = function(latlng) {
+    // ローカルサーチAPIのURLを作成します
+    var cassetteUrl = this.urlBase +
+                      "&lat=" + latlng.lat() +
+                      "&lon=" + latlng.lng();
+
+    // ヒートマップレイヤーを追加します
+    this.heatmapLayer = new Y.GeoXmlHeatmapLayer(cassetteUrl);
+    this.map.addLayer(this.heatmapLayer);
+    this.map.panTo(latlng);
+};
+
+// unload() メソッドを実装します
+CassetteHeatmapPlugin.prototype.unload = function() {
+    if (this.heatmapLayer) {
+        this.map.removeLayer(this.heatmapLayer);
+    }
+};
+// 地図のオプションを指定
+var mapOptions = {
+    "configure": {
+        "hybridPhoto": true,
+        "scrollWheelZoom": true
+    }
+};
+
+// 地図を初期化
+var map = new Y.Map("map", mapOptions);
+map.addControl(new Y.LayerSetControl());
+map.addControl(new Y.ZoomControl());
+map.drawMap(new Y.LatLng(35.665627,139.730738), 13, Y.LayerSetId.PHOTO);
+
+var appId = "YourApplicationId";
+var cassetteId = "d115e2a62c8f28cb03a493dc407fa03f";
+var myPlugin = new CassetteHeatmapPlugin(appId, cassetteId);
+
+map.addPlugin(myPlugin);
+
+function renderArea() {
+    var area = document.getElementById("area");
+    var selectedArea = "東京都" + area.options[area.selectedIndex].value;
+
+    myPlugin.render(selectedArea);
+}
+</script>
+</body>
+</html>
